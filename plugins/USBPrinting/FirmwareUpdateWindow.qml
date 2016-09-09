@@ -5,7 +5,7 @@ import QtQuick 2.2
 import QtQuick.Window 2.2
 import QtQuick.Controls 1.2
 
-import UM 1.0 as UM
+import UM 1.1 as UM
 
 UM.Dialog
 {
@@ -17,62 +17,93 @@ UM.Dialog
     visible: true;
     modality: Qt.ApplicationModal;
 
-    title: "Firmware Update";
+    title: catalog.i18nc("@title:window","Firmware Update");
 
     Column
     {
         anchors.fill: parent;
 
-        Text
+        Label
         {
-            anchors {
+            anchors
+            {
                 left: parent.left;
                 right: parent.right;
             }
 
             text: {
-                if (manager.progress == 0)
+                if (manager.errorCode == 0)
                 {
-                    //: Firmware update status label
-                    return qsTr("Starting firmware update, this may take a while.")
-                }
-                else if (manager.progress > 99)
-                {
-                    //: Firmware update status label
-                    return qsTr("Firmware update completed.")
+                    if (manager.firmwareUpdateCompleteStatus)
+                    {
+                        //: Firmware update status label
+                        return catalog.i18nc("@label","Firmware update completed.")
+                    }
+                    else if (manager.progress == 0)
+                    {
+                        //: Firmware update status label
+                        return catalog.i18nc("@label","Starting firmware update, this may take a while.")
+                    }
+                    else
+                    {
+                        //: Firmware update status label
+                        return catalog.i18nc("@label","Updating firmware.")
+                    }
                 }
                 else
                 {
-                    //: Firmware update status label
-                    return qsTr("Updating firmware.")
+                    switch (manager.errorCode)
+                    {
+                        case 1:
+                            //: Firmware update status label
+                            return catalog.i18nc("@label","Firmware update failed due to an unknown error.")
+                        case 2:
+                            //: Firmware update status label
+                            return catalog.i18nc("@label","Firmware update failed due to an communication error.")
+                        case 3:
+                            //: Firmware update status label
+                            return catalog.i18nc("@label","Firmware update failed due to an input/output error.")
+                        case 4:
+                            //: Firmware update status label
+                            return catalog.i18nc("@label","Firmware update failed due to missing firmware.")
+                        default:
+                            //: Firmware update status label
+                            return catalog.i18nc("@label", "Unknown error code: %1").arg(manager.errorCode)
+                    }
                 }
             }
 
             wrapMode: Text.Wrap;
         }
 
-        ProgressBar 
+        ProgressBar
         {
-            id: prog;
-            value: manager.progress
-            minimumValue: 0;
-            maximumValue: 100;
-            anchors {
+            id: prog
+            value: manager.firmwareUpdateCompleteStatus ? 100 : manager.progress
+            minimumValue: 0
+            maximumValue: 100
+            indeterminate: (manager.progress < 1) && (!manager.firmwareUpdateCompleteStatus)
+            anchors
+            {
                 left: parent.left;
                 right: parent.right;
             }
 
         }
-        
-        SystemPalette {
+
+        SystemPalette
+        {
            id: palette;
         }
+
+        UM.I18nCatalog { id: catalog; name: "cura"; }
     }
 
     rightButtons: [
-        Button {
-            text: "Close";
-            enabled: manager.progress >= 100;
+        Button
+        {
+            text: catalog.i18nc("@action:button","Close");
+            enabled: manager.firmwareUpdateCompleteStatus;
             onClicked: base.visible = false;
         }
     ]

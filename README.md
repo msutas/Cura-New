@@ -13,7 +13,10 @@ Use [this](https://github.com/Ultimaker/Uranium/wiki/Bug-Reporting-Template) tem
 For crashes and similar issues, please attach the following information:
 
 * (On Windows) The log as produced by dxdiag (start -> run -> dxdiag -> save output)
-* The Cura GUI log file, located at (Windows) $User/AppData/Local/cura/cura.log, (OSX) $User/.cura/cura.log
+* The Cura GUI log file, located at
+  * $User/AppData/Local/cura/cura.log (Windows)
+  * $User/Library/Application Support/cura (OSX)
+  * $USER/.local/share/cura (Ubuntu/Linux)
 * The Cura Engine log, using Help -> Show Engine Log
 
 Dependencies
@@ -23,7 +26,7 @@ Dependencies
   Cura is built on top of the Uranium framework.
 * [CuraEngine](https://github.com/Ultimaker/CuraEngine)
   This will be needed at runtime to perform the actual slicing.
-* PySerial
+* [PySerial](https://github.com/pyserial/pyserial)
   Only required for USB printing support.
 
 Configuring Cura
@@ -41,10 +44,11 @@ Third party plugins
 -------------
 * [Print time calculator](https://github.com/nallath/PrintCostCalculator)
 * [Post processing plugin](https://github.com/nallath/PostProcessingPlugin)
+* [Barbarian Plugin](https://github.com/nallath/BarbarianPlugin) Simple scale tool for imperial to metric.
 
 Making profiles for other printers
 ----------------------------------
-There are two ways of doing it. You can either use the generator [here](http://quillford.github.io/CuraProfileMaker/) or you can use [this](https://github.com/Ultimaker/Cura/blob/master/resources/settings/ultimaker_original.json) as a template.
+There are two ways of doing it. You can either use the generator [here](http://quillford.github.io/CuraProfileMaker/) or you can use [this](https://github.com/Ultimaker/Cura/blob/master/resources/machines/ultimaker_original.json) as a template.
 
 * Change the machine ID to something unique
 * Change the machine_name to your printer's name
@@ -56,4 +60,4 @@ There are two ways of doing it. You can either use the generator [here](http://q
 * Set the start and end gcode in machine_start_gcode and machine_end_gcode
 * If your printer has a heated bed, set visible to true under material_bed_temperature
 
-Once you are done, put the profile you have made into resources/settings.
+Once you are done, put the profile you have made into resources/machines, or in machines in your cura profile folder.

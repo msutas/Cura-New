@@ -4,76 +4,82 @@
 from UM.Scene.SceneNode import SceneNode
 from UM.Resources import Resources
 from UM.Math.Color import Color
-from UM.Math.Vector import Vector
-from UM.Mesh.MeshData import MeshData
+from UM.Mesh.MeshBuilder import MeshBuilder  # To create a mesh to display the convex hull with.
 
-import numpy
+from UM.View.GL.OpenGL import OpenGL
 
 class ConvexHullNode(SceneNode):
-    def __init__(self, node, hull, parent = None):
+    ##  Convex hull node is a special type of scene node that is used to display an area, to indicate the
+    #   location an object uses on the buildplate. This area (or area's in case of one at a time printing) is
+    #   then displayed as a transparent shadow. If the adhesion type is set to raft, the area is extruded
+    #   to represent the raft as well.
+    def __init__(self, node, hull, thickness, parent = None):
         super().__init__(parent)
 
         self.setCalculateBoundingBox(False)
 
-        self._material = None
+        self._shader = None
 
         self._original_parent = parent
 
-        self._inherit_orientation = False
-        self._inherit_scale = False
+        # Color of the drawn convex hull
+        self._color = Color(0.4, 0.4, 0.4, 1.0)
 
+        # The y-coordinate of the convex hull mesh. Must not be 0, to prevent z-fighting.
+        self._mesh_height = 0.1
+
+        self._thickness = thickness
+
+        # The node this mesh is "watching"
         self._node = node
-        self._node.transformationChanged.connect(self._onNodePositionChanged)
-        self._node.parentChanged.connect(self._onNodeParentChanged)
-        #self._onNodePositionChanged(self._node)
+        self._convex_hull_head_mesh = None
+
+        self._node.decoratorsChanged.connect(self._onNodeDecoratorsChanged)
+        self._onNodeDecoratorsChanged(self._node)
 
         self._hull = hull
+        if self._hull:
+            hull_mesh_builder = MeshBuilder()
 
-        hull_points = self._hull.getPoints()
-        mesh = MeshData()
-        if len(hull_points) > 3:
-            center = (hull_points.min(0) + hull_points.max(0)) / 2.0
-            mesh.addVertex(center[0], 0.1, center[1])
-        else: #Hull has not enough points
-            return
-        for point in hull_points:
-            mesh.addVertex(point[0], 0.1, point[1])
-        indices = []
-        for i in range(len(hull_points) - 1):
-            indices.append([0, i + 1, i + 2])
+            if hull_mesh_builder.addConvexPolygonExtrusion(
+                self._hull.getPoints()[::-1],  # bottom layer is reversed
+                self._mesh_height-thickness, self._mesh_height, color=self._color):
 
-        indices.append([0, mesh.getVertexCount() - 1, 1])
+                hull_mesh = hull_mesh_builder.build()
+                self.setMeshData(hull_mesh)
 
-        mesh.addIndices(numpy.array(indices, numpy.int32))
+    def getHull(self):
+        return self._hull
 
-        self.setMeshData(mesh)
+    def getThickness(self):
+        return self._thickness
 
     def getWatchedNode(self):
         return self._node
 
     def render(self, renderer):
-        if not self._material:
-            self._material = renderer.createMaterial(Resources.getPath(Resources.ShadersLocation, "basic.vert"), Resources.getPath(Resources.ShadersLocation, "color.frag"))
+        if not self._shader:
+            self._shader = OpenGL.getInstance().createShaderProgram(Resources.getPath(Resources.Shaders, "transparent_object.shader"))
+            self._shader.setUniformValue("u_diffuseColor", self._color)
+            self._shader.setUniformValue("u_opacity", 0.6)
 
-            self._material.setUniformValue("u_color", Color(35, 35, 35, 128))
         if self.getParent():
-            renderer.queueNode(self, material = self._material, transparent = True)
+            if self.getMeshData():
+                renderer.queueNode(self, transparent = True, shader = self._shader, backface_cull = True, sort = -8)
+                if self._convex_hull_head_mesh:
+                    renderer.queueNode(self, shader = self._shader, transparent = True, mesh = self._convex_hull_head_mesh, backface_cull = True, sort = -8)
 
         return True
-    
 
-    def _onNodePositionChanged(self, node):
-        #self.setPosition(node.getWorldPosition())
-        if node.callDecoration("getConvexHull"): 
-            node.callDecoration("setConvexHull", None)
-            node.callDecoration("setConvexHullNode", None)
-            self.setParent(None)
+    def _onNodeDecoratorsChanged(self, node):
+        self._color = Color(35, 35, 35, 0.5)
 
-        #self._node.transformationChanged.disconnect(self._onNodePositionChanged)
-        #self._node.parentChanged.disconnect(self._onNodeParentChanged)
+        convex_hull_head = self._node.callDecoration("getConvexHullHead")
+        if convex_hull_head:
+            convex_hull_head_builder = MeshBuilder()
+            convex_hull_head_builder.addConvexPolygon(convex_hull_head.getPoints(), self._mesh_height - self._thickness)
+            self._convex_hull_head_mesh = convex_hull_head_builder.build()
 
-    def _onNodeParentChanged(self, node):
-        if node.getParent():
-            self.setParent(self._original_parent)
-        else:
-            self.setParent(None)
+        if not node:
+            return
+

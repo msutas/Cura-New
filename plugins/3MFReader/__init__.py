@@ -1,24 +1,26 @@
 # Copyright (c) 2015 Ultimaker B.V.
 # Cura is released under the terms of the AGPLv3 or higher.
 
+from . import ThreeMFReader
+
 from UM.i18n import i18nCatalog
 catalog = i18nCatalog("cura")
-
-from . import ThreeMFReader
 
 def getMetaData():
     return {
         "plugin": {
-            "name": "3MF Reader",
+            "name": catalog.i18nc("@label", "3MF Reader"),
             "author": "Ultimaker",
             "version": "1.0",
-            "description": catalog.i18nc("3MF Reader plugin description", "Provides support for reading 3MF files."),
-            "api": 2
+            "description": catalog.i18nc("@info:whatsthis", "Provides support for reading 3MF files."),
+            "api": 3
         },
-        "mesh_reader": {
-            "extension": "3mf",
-            "description": catalog.i18nc("3MF Reader plugin file type", "3MF File")
-        }
+        "mesh_reader": [
+            {
+                "extension": "3mf",
+                "description": catalog.i18nc("@item:inlistbox", "3MF File")
+            }
+        ]
     }
 
 def register(app):

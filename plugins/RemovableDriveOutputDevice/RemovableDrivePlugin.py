@@ -4,14 +4,14 @@
 import threading
 import time
 
-from UM.Signal import Signal
 from UM.Message import Message
 from UM.OutputDevice.OutputDevicePlugin import OutputDevicePlugin
+from UM.Logger import Logger
 
 from . import RemovableDriveOutputDevice
-
+from UM.Logger import Logger
 from UM.i18n import i18nCatalog
-catalog = i18nCatalog("uranium")
+catalog = i18nCatalog("cura")
 
 class RemovableDrivePlugin(OutputDevicePlugin):
     def __init__(self):
@@ -37,13 +37,21 @@ class RemovableDrivePlugin(OutputDevicePlugin):
         raise NotImplementedError()
 
     def ejectDevice(self, device):
-        result = self.performEjectDevice(device)
+        try:
+            Logger.log("i", "Attempting to eject the device")
+            result = self.performEjectDevice(device)
+        except Exception as e:
+            Logger.log("e", "Ejection failed due to: %s" % str(e))
+            result = False
+
         if result:
-            message = Message(catalog.i18n("Ejected {0}. You can now safely remove the drive.").format(device.getName()))
+            Logger.log("i", "Succesfully ejected the device")
+            message = Message(catalog.i18nc("@info:status", "Ejected {0}. You can now safely remove the drive.").format(device.getName()))
             message.show()
         else:
-            message = Message(catalog.i18n("Failed to eject {0}. Maybe it is still in use?").format(device.getName()))
+            message = Message(catalog.i18nc("@info:status", "Failed to eject {0}. Another program may be using the drive.").format(device.getName()))
             message.show()
+        return result
 
     def performEjectDevice(self, device):
         raise NotImplementedError()
